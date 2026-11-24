@@ -13,14 +13,32 @@ WORD = "BEEPBOOP"
 OUTPUT = Path("/output/entry.txt")
 
 
+def validate(word: str) -> str:
+    """Enforce the competition gate on the word before it is written.
+
+    The sealed gate accepts UTF-8 text of 1 to 30 characters, not only
+    white space; the judge brief wants exactly one word, no sentence,
+    no explanation, no punctuation tricks. Anything failing here must
+    never reach /output/entry.txt.
+    """
+    if not (1 <= len(word) <= 30):
+        raise ValueError(f"word must be 1-30 characters, got {len(word)}")
+    if not word.strip():
+        raise ValueError("word must not be only white space")
+    if word != word.strip() or any(ch.isspace() for ch in word):
+        raise ValueError("entry must be exactly one word, no white space")
+    if any(not ch.isalpha() for ch in word):
+        raise ValueError("entry must be letters only, no punctuation tricks")
+    return word
+
+
 def main() -> None:
-    # Self-check against the competition gate: UTF-8 text, 1 to 30
-    # characters, not only white space, exactly one word.
-    text = WORD.strip()
-    assert 1 <= len(text) <= 30, "word must be 1-30 characters"
-    assert text == WORD and " " not in text, "entry must be exactly one word"
+    text = validate(WORD)
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(text, encoding="utf-8")
+    # Round-trip check: what the judge will read must be exactly the word.
+    if OUTPUT.read_text(encoding="utf-8") != text:
+        raise RuntimeError("written entry does not match the word")
 
 
 if __name__ == "__main__":
